@@ -16,21 +16,39 @@ ACTIONS = {
 MONSTER_DAMAGE_BOUNDRIES = (10, 50)  # damage taken when stepping on a monster
 STARTING_HP = 100
 TREASURE_REWARD_BOUNDRIES = (50, 500)  # min and max reward for picking up a treasure
-VISION_RADIUS = 3  # how far the agent can see in each direction
+VISION_RADIUS = 2  # how far the agent can see in each direction
+MONSTER_VISION_RADIUS = 2  # how far monsters can see the agent for chasing
+MONSTER_NOTICE_CHANCE = 0.8  # probability that a monster will notice the agent if within vision radius and chase them
+MONSTER_LOST_SIGHT_LIMIT = 2
+
+class Monster:
+    def __init__(self, pos):
+        self.pos = pos
+        self.alert = False
+        self.lost_sight_steps = 0
 
 class DungeonEnv:
-    def __init__(self, size=25, num_treasures=4, num_monsters=2):
+    def __init__(self, size=25, num_treasures=4, num_monsters=2, vision_radius=VISION_RADIUS, monster_vision_radius=MONSTER_VISION_RADIUS, MONSTER_NOTICE_CHANCE=MONSTER_NOTICE_CHANCE):
         self.size         = size
         self.num_treasures= num_treasures
         self.num_monsters = num_monsters
+        self.vision_radius = vision_radius
+        self.monster_vision_radius = monster_vision_radius
+        self.MONSTER_NOTICE_CHANCE = MONSTER_NOTICE_CHANCE
         self.agent_hp     = STARTING_HP
         self.treasure_held= 0
         self.done         = False
+        self.message      = ""
         self._generate()
 
     def _generate(self):
         """Full dungeon generation in the correct order."""
+        self.agent_hp    = STARTING_HP
+        self.treasure_held= 0
+        self.done        = False
         self.grid = np.zeros((self.size, self.size), dtype=int)
+        self.explored = np.zeros((self.size, self.size), dtype=bool)
+        self.message = ""
 
         # 1. Build rooms and corridors first
         self.placed_rooms = self._create_rooms()
@@ -42,10 +60,12 @@ class DungeonEnv:
         self.agent_pos         = walkable.pop()
         self.exit_pos          = walkable.pop()
         self.treasure_positions= [walkable.pop() for _ in range(min(self.num_treasures, len(walkable)))]
-        self.monster_positions = [walkable.pop() for _ in range(min(self.num_monsters,  len(walkable)))]
+        
+        self.monsters = [Monster(walkable.pop()) for _ in range(min(self.num_monsters,  len(walkable)))]
 
         # 3. Write entities onto grid
         self._update_grid()
+        self._update_vision()
 
     def reset(self):
         self._generate()
@@ -108,6 +128,46 @@ class DungeonEnv:
             if 0 <= x < self.size and 0 <= y < self.size:
                 self.grid[x][y] = CELL_EMPTY
 
+    def _update_vision(self):
+        ar, ac = self.agent_pos
+        r_min = max(0, ar - self.vision_radius)
+        r_max = min(self.size, ar + self.vision_radius + 1)
+        c_min = max(0, ac - self.vision_radius)
+        c_max = min(self.size, ac + self.vision_radius + 1)
+        self.explored[r_min:r_max, c_min:c_max] = True
+
+    def get_observed_grid(self):
+        observed = self.grid.copy()
+        observed[~self.explored] = -1  # mark unexplored cells
+        return observed
+    
+    def _has_line_of_sight(self, monster_pos):
+        mr, mc = monster_pos
+        ar, ac = self.agent_pos
+        same_row = (mr == ar)
+        same_col = (mc == ac)
+        if not same_row and not same_col:
+            return False
+        if same_row:
+            dist = abs(ac-mc)
+            if dist > self.monster_vision_radius:
+                return False
+            step = 1 if ac > mc else -1
+            for c in range(mc + step, ac, step):
+                if self.grid[mr][c] == CELL_WALL:
+                    return False
+            return True
+        if same_col:
+            dist = abs(ar-mr)
+            if dist > self.monster_vision_radius:
+                return False
+            step = 1 if ar > mr else -1
+            for r in range(mr + step, ar, step):
+                if self.grid[r][mc] == CELL_WALL:
+                    return False
+            return True
+        return False
+
     def _walkable_cells(self):
         """Return all floor cells (value 0)."""
         return [(r, c) for r in range(self.size)
@@ -120,17 +180,23 @@ class DungeonEnv:
         self.grid[self.exit_pos]   = CELL_EXIT
         for pos in self.treasure_positions:
             self.grid[pos] = CELL_TREASURE
-        for pos in self.monster_positions:
-            self.grid[pos] = CELL_MONSTER
+        for monster in self.monsters:
+            self.grid[monster.pos] = CELL_MONSTER
 
     def get_state(self):
-        return self.agent_pos, self.exit_pos, self.treasure_positions, self.monster_positions
-    
+        return (
+            self.agent_pos, 
+            self.exit_pos, 
+            self.treasure_positions, 
+            [monster.pos for monster in self.monsters]
+        )
+
     def step(self, action):
         if self.done:
             return self.get_state(), 0, True, self._info()
         
         reward = -0.1
+        self.message = ""  # clear previous message each step
         
         if action == 'exit':
             if self.agent_pos == self.exit_pos:
@@ -144,8 +210,8 @@ class DungeonEnv:
             else:
                 self.message = "Tried to exit but not at the exit. No reward."
                 return self.get_state(), reward, self.done, self._info()
-        if action not in ACTIONS.values():
-            self.message = "Invalid action. No reward."
+        if action not in ACTIONS:
+            self.message = f"Unknown action: {action}. Do Better."
             return self.get_state(), reward, self.done, self._info()
         
         dr, dc = ACTIONS[action]
@@ -160,25 +226,30 @@ class DungeonEnv:
             self.agent_pos = (new_r, new_c) 
             
             if self.agent_pos in self.treasure_positions:
-                self.treasure_held += random.randint(*TREASURE_REWARD_BOUNDRIES)
+                gained = random.randint(*TREASURE_REWARD_BOUNDRIES)
+                self.treasure_held += gained
                 self.treasure_positions.remove(self.agent_pos)
-                reward += random.randint(*TREASURE_REWARD_BOUNDRIES)
-                self.message = f"Picked up a treasure! Carrying {self.treasure_held} treasure."
+                reward += gained
+                self.message = f"Picked up {gained} treasure! Carrying {self.treasure_held} treasure."
                 
             self.grid[self.agent_pos] = CELL_AGENT
         
+        self._update_vision()
+
         self._move_monsters()
         
-        if self.agent_pos in self.monster_positions:
+        monster_positions = [m.pos for m in self.monsters]
+
+        if self.agent_pos in monster_positions:
             damage = random.randint(*MONSTER_DAMAGE_BOUNDRIES)
             self.agent_hp -= damage
             reward -= damage
-            self.message = f"Stepped on a monster! Lost {damage} health."
+            self.message = f"Stepped on a monster! Lost {damage} health. Current HP: {self.agent_hp}."
             
         if self.agent_hp <= 0:
             reward -= 100
             self.done = True
-            self.message = "Died from monster damage. Game over."
+            self.message = "Died from monster. Game over. Womp Womp."
             self.treasure_held = 0
             
         return self.get_state(), reward, self.done, self._info()
@@ -190,32 +261,39 @@ class DungeonEnv:
     
     def _move_monsters(self):
         ar, ac = self.agent_pos
-        new_monster_positions = []
-        for pos in self.monster_positions:
-            mr, mc = pos
-            self.grid[pos] = CELL_EMPTY
-            
-            #decide direction towards agent
-            dr = 0 if ar == mr else (1 if ar > mr else -1)
-            dc = 0 if ac == mc else (1 if ac > mc else -1)
-            
-            candidates = [
-                (mr+dr, mc),
-                (mr, mc+dc),
-                (mr, mc)
-            ]
-            moved = False
-            for nr, nc in candidates:
-                if self._is_walkable(nr, nc) and (nr, nc) not in new_monster_positions:
-                    new_monster_positions.append((nr, nc))
-                    moved = True
-                    break
-            if not moved:
-                new_monster_positions.append(pos)
-                
-        self.monster_positions = new_monster_positions
-        for pos in self.monster_positions:
-            self.grid[pos] = CELL_MONSTER
+        occupied = set()
+
+        for monster in self.monsters:
+            self.grid[monster.pos] = CELL_EMPTY  # Clear old position
+            can_see = self._has_line_of_sight(monster.pos)
+            if can_see:
+                if not monster.alert:
+                    if random.random() < self.MONSTER_NOTICE_CHANCE:
+                        monster.alert = True
+                monster.lost_sight_steps = 0
+            else:
+                if monster.alert:
+                    monster.lost_sight_steps += 1
+                    if monster.lost_sight_steps >= MONSTER_LOST_SIGHT_LIMIT:
+                        monster.alert = False
+                        monster.lost_sight_steps = 0
+            if monster.alert:
+                mr, mc = monster.pos
+                dr = 0 if ar == mr else (1 if ar > mr else -1)
+                dc = 0 if ac == mc else (1 if ac > mc else -1)
+                candidates = [
+                    (mr+dr, mc),
+                    (mr, mc+dc),
+                    (mr, mc)
+                ]
+                for nr, nc in candidates:
+                    if self._is_walkable(nr, nc) and (nr, nc) not in occupied:
+                        monster.pos = (nr, nc)
+                        break
+            occupied.add(monster.pos)
+                    
+        for monster in self.monsters:
+            self.grid[monster.pos] = CELL_MONSTER
             
     def _info(self):
         return {
