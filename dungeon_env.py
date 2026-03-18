@@ -7,12 +7,25 @@ CELL_AGENT   = 1
 CELL_EXIT    = 2
 CELL_TREASURE= 3
 CELL_MONSTER = 4
+ACTIONS = {
+    'up': (-1, 0),
+    'down': (1, 0),
+    'left': (0, -1),
+    'right': (0, 1),
+}
+MONSTER_DAMAGE_BOUNDRIES = (10, 50)  # damage taken when stepping on a monster
+STARTING_HP = 100
+TREASURE_REWARD_BOUNDRIES = (50, 500)  # min and max reward for picking up a treasure
+VISION_RADIUS = 3  # how far the agent can see in each direction
 
 class DungeonEnv:
     def __init__(self, size=25, num_treasures=4, num_monsters=2):
         self.size         = size
         self.num_treasures= num_treasures
         self.num_monsters = num_monsters
+        self.agent_hp     = STARTING_HP
+        self.treasure_held= 0
+        self.done         = False
         self._generate()
 
     def _generate(self):
@@ -112,3 +125,102 @@ class DungeonEnv:
 
     def get_state(self):
         return self.agent_pos, self.exit_pos, self.treasure_positions, self.monster_positions
+    
+    def step(self, action):
+        if self.done:
+            return self.get_state(), 0, True, self._info()
+        
+        reward = -0.1
+        
+        if action == 'exit':
+            if self.agent_pos == self.exit_pos:
+                if self.treasure_held > 0:
+                    reward += 50 + self.treasure_held
+                    self.message = f"Exited with {self.treasure_held} treasures! +{self.treasure_held} reward."
+                else:
+                    self.message = "Exited without treasures. No reward."
+                self.done = True
+                return self.get_state(), reward, self.done, self._info()
+            else:
+                self.message = "Tried to exit but not at the exit. No reward."
+                return self.get_state(), reward, self.done, self._info()
+        if action not in ACTIONS.values():
+            self.message = "Invalid action. No reward."
+            return self.get_state(), reward, self.done, self._info()
+        
+        dr, dc = ACTIONS[action]
+        new_r = self.agent_pos[0] + dr
+        new_c = self.agent_pos[1] + dc
+        
+        if not self._is_walkable(new_r, new_c):
+            self.message = "Bumped into a wall. No reward."
+            return self.get_state(), reward, self.done, self._info()
+        else:
+            self.grid[self.agent_pos] = CELL_EMPTY
+            self.agent_pos = (new_r, new_c) 
+            
+            if self.agent_pos in self.treasure_positions:
+                self.treasure_held += random.randint(*TREASURE_REWARD_BOUNDRIES)
+                self.treasure_positions.remove(self.agent_pos)
+                reward += random.randint(*TREASURE_REWARD_BOUNDRIES)
+                self.message = f"Picked up a treasure! Carrying {self.treasure_held} treasure."
+                
+            self.grid[self.agent_pos] = CELL_AGENT
+        
+        self._move_monsters()
+        
+        if self.agent_pos in self.monster_positions:
+            damage = random.randint(*MONSTER_DAMAGE_BOUNDRIES)
+            self.agent_hp -= damage
+            reward -= damage
+            self.message = f"Stepped on a monster! Lost {damage} health."
+            
+        if self.agent_hp <= 0:
+            reward -= 100
+            self.done = True
+            self.message = "Died from monster damage. Game over."
+            self.treasure_held = 0
+            
+        return self.get_state(), reward, self.done, self._info()
+    
+    def _is_walkable(self, r, c):
+        if not (0 <= r < self.size and 0 <= c < self.size):
+            return False
+        return self.grid[r][c] != CELL_WALL
+    
+    def _move_monsters(self):
+        ar, ac = self.agent_pos
+        new_monster_positions = []
+        for pos in self.monster_positions:
+            mr, mc = pos
+            self.grid[pos] = CELL_EMPTY
+            
+            #decide direction towards agent
+            dr = 0 if ar == mr else (1 if ar > mr else -1)
+            dc = 0 if ac == mc else (1 if ac > mc else -1)
+            
+            candidates = [
+                (mr+dr, mc),
+                (mr, mc+dc),
+                (mr, mc)
+            ]
+            moved = False
+            for nr, nc in candidates:
+                if self._is_walkable(nr, nc) and (nr, nc) not in new_monster_positions:
+                    new_monster_positions.append((nr, nc))
+                    moved = True
+                    break
+            if not moved:
+                new_monster_positions.append(pos)
+                
+        self.monster_positions = new_monster_positions
+        for pos in self.monster_positions:
+            self.grid[pos] = CELL_MONSTER
+            
+    def _info(self):
+        return {
+            'agent_hp':     self.agent_hp,
+            'treasure_held':self.treasure_held,
+            'message':      self.message, 
+            'done':         self.done
+        }

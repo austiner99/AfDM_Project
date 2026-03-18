@@ -10,6 +10,7 @@ A repository for my Algorithms for Decision Making class project. The project in
 1. Agent's goal is to obtain as much treasure as possible and exit the dungeon
 2. Treasure rewards will range from 50-500 positive points
 2. Monsters will seek to stop the agent
+3. Attacks are made when the agent or monster moves into another's square (beware: if you move away from a monster and they move into your square, you do less damage and take more damage)
 3. If the agent reaches 0 hp he dies and banks nothing
 4. Defeating monsters gives 100 positive points
 5. Monsters remain motionless unless they see the agent. Upon seeing an agent they will move towards the agent, so long as there is an unbroken line of sight.
