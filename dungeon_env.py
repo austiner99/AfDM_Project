@@ -13,19 +13,26 @@ ACTIONS = {
     'left': (0, -1),
     'right': (0, 1),
 }
-MONSTER_DAMAGE_BOUNDRIES = (10, 50)
+MONSTER_DAMAGE_BOUNDRIES = (10, 25)
+AGENT_ATTACK_DAMAGE = (15, 30)
 STARTING_HP = 100
 TREASURE_REWARD_BOUNDRIES = (50, 500)
 VISION_RADIUS = 2
-MONSTER_VISION_RADIUS = 3
+MONSTER_VISION_RADIUS = 5
 MONSTER_NOTICE_CHANCE = 0.8
-MONSTER_LOST_SIGHT_LIMIT = 3
+MONSTER_LOST_SIGHT_LIMIT = 4
 
 class Monster:
     def __init__(self, pos):
         self.pos = pos
+        self.hp = random.randint(20, 75)
+        self.reward = self.hp
         self.alert = False
         self.lost_sight_steps = 0
+
+    @property
+    def alive(self):
+        return self.hp > 0
 
 class DungeonEnv:
     def __init__(self, size=25, num_treasures=4, num_monsters=2,
@@ -42,6 +49,7 @@ class DungeonEnv:
         self.treasure_held         = 0
         self.done                  = False
         self.message               = ""
+        self._attacked_this_turn = set()
         self._generate()
 
     def _generate(self):
@@ -49,6 +57,7 @@ class DungeonEnv:
         self.treasure_held = 0
         self.done          = False
         self.message       = ""
+        self._attacked_this_turn = set()
         self.grid          = np.zeros((self.size, self.size), dtype=int)
         self.explored      = np.zeros((self.size, self.size), dtype=bool)
 
@@ -88,7 +97,8 @@ class DungeonEnv:
 
         # Stamp moving entities on top
         for monster in self.monsters:
-            self.grid[monster.pos] = CELL_MONSTER
+            if monster.alive:
+                self.grid[monster.pos] = CELL_MONSTER
 
         # Agent drawn last so it's always visible even on exit/treasure cells
         self.grid[self.agent_pos] = CELL_AGENT
@@ -161,6 +171,55 @@ class DungeonEnv:
         observed = self.grid.copy()
         observed[~self.explored] = -1
         return observed
+    
+    # -- Adjacency helpers ---------------------------------------------------
+    def _adjacent_positions(self, pos):
+        r, c = pos
+        return [
+            (r+dr, c+dc) for dr, dc in [(-1,0), (1,0), (0,-1), (0,1)]
+            if 0 <= r+dr < self.size and 0 <= c+dc < self.size
+        ]
+    
+    def _adjacent_monsters(self, pos):
+        adj = set(self._adjacent_positions(pos))
+        return [m for m in self.monsters if m.alive and m.pos in adj]
+    
+    # -- Combat ----------------------------------------------------------------
+    def _monsters_attack(self):
+        self._attacked_this_turn = set()
+        reward = 0
+        messages = []
+        for monster in self.monsters:
+            if not monster.alive:
+                continue
+            if monster.pos in set(self._adjacent_positions(self.agent_pos)):
+                damage = random.randint(*MONSTER_DAMAGE_BOUNDRIES)
+                self.agent_hp -= damage
+                reward -= damage
+                messages.append(f"A monster attacks! -{damage} HP. ({self.agent_hp} HP remaining)")
+                self._attacked_this_turn.add(id(monster))
+                monster.alert = True  # Attacking also puts monster on alert
+                monster.lost_sight_steps = 0
+        return reward, " ".join(messages)
+    
+    def _agent_attack(self):
+        targets = self._adjacent_monsters(self.agent_pos)
+        if not targets:
+            return 0, "No adjacent mosnters to attack."
+        reward = 0
+        messages = []
+
+        for monster in targets:
+            damage_agent = random.randint(*AGENT_ATTACK_DAMAGE)
+            monster.hp -= damage_agent
+            messages.append(f"\nYou attack a monster for {damage_agent} damage!")
+            if not monster.alive:
+                reward += monster.reward
+                messages.append(f"You killed a monster! +{monster.reward} reward.")
+        
+        self.monsters = [m for m in self.monsters if m.alive]
+        self.treasure_held += reward
+        return reward, " ".join(messages)
 
     # ── Monster logic ─────────────────────────────────────────────────────────
 
@@ -191,9 +250,13 @@ class DungeonEnv:
 
     def _move_monsters(self):
         ar, ac = self.agent_pos
-        occupied = set()
+        occupied = {m.pos for m in self.monsters if m.alive}
 
         for monster in self.monsters:
+            if not monster.alive:
+                continue
+            if id(monster) in self._attacked_this_turn:
+                continue
             can_see = self._has_line_of_sight(monster.pos)
 
             if can_see:
@@ -212,6 +275,8 @@ class DungeonEnv:
                     if monster.lost_sight_steps >= MONSTER_LOST_SIGHT_LIMIT:
                         monster.alert = False
                         monster.lost_sight_steps = 0
+            if not monster.alert:
+                continue
 
             if monster.alert:
                 mr, mc = monster.pos
@@ -225,7 +290,7 @@ class DungeonEnv:
                 candidates.append((mr, mc))  # also consider standing still if blocked
                     
                 for nr, nc in candidates:
-                    if self._is_walkable(nr, nc) and (nr, nc) not in occupied:
+                    if self._is_walkable(nr, nc) and (nr, nc) not in occupied and (nr, nc) != self.agent_pos:
                         monster.pos = (nr, nc)
                         break
 
@@ -268,6 +333,11 @@ class DungeonEnv:
         reward = -0.1
         self.message = ""
 
+        mon_atk_reward, mon_atk_msg = self._monsters_attack()
+        reward += mon_atk_reward
+        if mon_atk_msg:
+            self.message += mon_atk_msg + " "
+
         # Exit action
         if action == 'exit':
             if self.agent_pos == self.exit_pos:
@@ -282,43 +352,44 @@ class DungeonEnv:
             else:
                 self.message = "Not at the exit."
                 return self.get_state(), reward, self.done, self._info()
-
+        elif action == 'attack':
+            atk_reward, atk_msg = self._agent_attack()
+            reward += atk_reward
+            if atk_msg:
+                self.message += atk_msg + " "
+            
         # Movement
-        if action not in ACTIONS:
-            self.message = f"Unknown action: {action}."
-            return self.get_state(), reward, self.done, self._info()
+        elif action in ACTIONS:
 
-        dr, dc = ACTIONS[action]
-        new_r  = self.agent_pos[0] + dr
-        new_c  = self.agent_pos[1] + dc
+            dr, dc = ACTIONS[action]
+            new_r  = self.agent_pos[0] + dr
+            new_c  = self.agent_pos[1] + dc
+            monster_cells = {m.pos for m in self.monsters if m.alive}
 
-        if not self._is_walkable(new_r, new_c):
-            self.message = "Bumped into a wall."
+            if not self._is_walkable(new_r, new_c):
+                self.message = "Bumped into a wall."
+            elif (new_r, new_c) in monster_cells:
+                self.message = "Can't move onto a monster! Try attacking instead."
+            else:
+                self.agent_pos = (new_r, new_c)
+
+                if self.agent_pos in self.treasure_positions:
+                    gained = random.randint(*TREASURE_REWARD_BOUNDRIES)
+                    self.treasure_held += gained
+                    self.treasure_positions.remove(self.agent_pos)
+                    reward += gained
+                    self.message = f"Picked up {gained} treasure! Carrying {self.treasure_held}."
         else:
-            self.agent_pos = (new_r, new_c)
-
-            if self.agent_pos in self.treasure_positions:
-                gained = random.randint(*TREASURE_REWARD_BOUNDRIES)
-                self.treasure_held += gained
-                self.treasure_positions.remove(self.agent_pos)
-                reward += gained
-                self.message = f"Picked up {gained} treasure! Carrying {self.treasure_held}."
-
-        self._update_vision()
+            self.message = "Unknown action."
+        
         self._move_monsters()
-
-        # Check monster collision
-        if self.agent_pos in [m.pos for m in self.monsters]:
-            damage = random.randint(*MONSTER_DAMAGE_BOUNDRIES)
-            self.agent_hp -= damage
-            reward -= damage
-            self.message = f"A monster attacks! -{damage} HP. ({self.agent_hp} HP remaining)"
-
         if self.agent_hp <= 0:
             reward -= 100
             self.done = True
             self.treasure_held = 0
-            self.message = "You died. Womp Womp."
+            self.message += "You died. Womp Womp."
+
+        self._update_vision()
 
         self._redraw_grid()
         return self.get_state(), reward, self.done, self._info()

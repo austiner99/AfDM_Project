@@ -93,7 +93,7 @@ def update_display(fig, ax, im, txt, env, info, cheat=False):
               framealpha=0.7, borderpad=0.4,
               facecolor='#2a2a2a', edgecolor='#444444',
               labelcolor='white')
-    hp = info.get('hp', '?')
+    hp = info.get('agent_hp', '?')
     treasure = info.get('treasure_held', 0)
     mode = '[CHEAT]' if cheat else '[fog of war]'
     message = info.get('message', '')

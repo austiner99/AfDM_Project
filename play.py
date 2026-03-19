@@ -11,19 +11,22 @@
 
 from dungeon_env import DungeonEnv
 from visualize import make_display, update_display
+import random
 
 KEY_MAP = {
     'w': 'up',  'up': 'up',
     's': 'down','down': 'down',
     'a': 'left','left': 'left',
     'd': 'right','right': 'right',
-    'e': 'exit'
+    'e': 'exit',
+    'f': 'attack', 'attack': 'attack'
 }
 
 HELP = """
   w / up     — move north      s / down  — move south
   a / left   — move west       d / right — move east
   e          — exit dungeon (must be standing on the green exit cell)
+  f          — attack (must be adjacent to a monster)
   m          — toggle cheat map (see full dungeon)
   r          — start a new game
   q          — quit
@@ -31,14 +34,14 @@ HELP = """
 """
 
 def play():
-    env = DungeonEnv(size=20, num_treasures=4, num_monsters=3)
+    env = DungeonEnv(size=20, num_treasures=random.randint(3, 8), num_monsters=random.randint(3, 8))
     info = env._info()
     info['message'] = 'Welcome to the Dungeon Crawler! Press ? for help.'
     cheat = False
     display = make_display(title='Dungeon Crawler')
     update_display(*display, env=env, info=info, cheat=cheat)
 
-    print("\nDungeon Crawler — w/a/s/d move | e exit | m cheat | r restart | q quit | ? help")
+    print("\nDungeon Crawler — w/a/s/d move | e exit | f attack | m cheat | r restart | q quit | ? help")
     print("THe map window updates after each move. \n")
 
     while True:
@@ -53,7 +56,7 @@ def play():
             print(HELP)
             continue
         if raw == 'r':
-            env = DungeonEnv(size=20, num_treasures=4, num_monsters=3)
+            env = DungeonEnv(size=20, num_treasures=random.randint(3, 8), num_monsters=random.randint(3, 8))
             info = env._info()
             info['message'] = 'Game restarted! Press ? for help.'
             cheat = False
