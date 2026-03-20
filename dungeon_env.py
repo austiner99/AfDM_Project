@@ -35,13 +35,17 @@ class Monster:
         return self.hp > 0
 
 class DungeonEnv:
-    def __init__(self, size=25, num_treasures=4, num_monsters=2,
+    def __init__(self, size=25,
                  vision_radius=VISION_RADIUS,
                  monster_vision_radius=MONSTER_VISION_RADIUS,
                  monster_notice_chance=MONSTER_NOTICE_CHANCE):
         self.size                  = size
-        self.num_treasures         = num_treasures
-        self.num_monsters          = num_monsters
+        self.num_treasures         = random.randint(2, self.size // 4 + 1)
+        if self.num_treasures > 7:
+            self.num_treasures = 6
+        self.num_monsters          = random.randint(2, self.size // 4)
+        if self.num_monsters > 6:
+            self.num_monsters = 5
         self.vision_radius         = vision_radius
         self.monster_vision_radius = monster_vision_radius
         self.monster_notice_chance = monster_notice_chance

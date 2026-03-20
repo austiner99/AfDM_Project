@@ -95,7 +95,7 @@ def update_display(fig, ax, im, txt, env, info, cheat=False):
               labelcolor='white')
     hp = info.get('agent_hp', '?')
     treasure = info.get('treasure_held', 0)
-    mode = '[CHEAT]' if cheat else '[fog of war]'
+    mode = '[CHEAT]' if cheat else ''
     message = info.get('message', '')
     if message:
         mode += f" - {message}"
@@ -109,6 +109,7 @@ def update_display(fig, ax, im, txt, env, info, cheat=False):
 
     fig.canvas.draw()
     fig.canvas.flush_events()
+    plt.pause(0.001)  # small pause to allow GUI to update
 
 def visualize_environment(grid, title='Dungeon Environment'):
     """Utility to visualize a static grid (for debugging)."""
