@@ -36,7 +36,7 @@ def run_episode(env, agent, display=None, delay = 0.15, verbose = True, cheat = 
         
     total_reward = 0.0
     steps = 0
-    timeout = 125 #arbitrary timeout to prevent infinite loops
+    timeout = 200 #arbitrary timeout to prevent infinite loops
     while not info['done']:
         action = agent.act(obs, info)
         obs, reward, done, info = env.step(action)

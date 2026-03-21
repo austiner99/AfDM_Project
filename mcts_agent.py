@@ -2,6 +2,7 @@
 import math
 import random
 import copy
+from collections import deque
 from dungeon_env import DungeonEnv, ACTIONS
 
 #Tunable parameters for MCTS
@@ -12,8 +13,8 @@ GAMMA = 0.97 #discount factor for future rewards in MCTS - CAN ADJUST - had to m
 
 #rollout eval:
 REWARD_STEP = -0.1 # small negative reward for each step taken (to encourage shorter paths)
-REWARD_TREASURE_STEP = 2.0 # reward per step closer to nearest treasure
-REWARD_EXIT_STEP = 3.0 # reward per step closer to exit (if have treasure)
+REWARD_TREASURE_STEP = 3.0 # reward per step closer to nearest treasure
+REWARD_EXIT_STEP = 4.0 # reward per step closer to exit (if have treasure)
 REWARD_EXIT_BONUS = 50.0 # Bonus for exiting the dungeon with treasure
 
 class MCTSNode:
@@ -52,9 +53,12 @@ class MCTSAgent:
         self.c = c
         self.gamma = gamma
         self._recent_positions = []
-        self._history_len = 7 #number of recent positions to track for loop detection
-        
+        self._history_len = 8 #number of recent positions to track for loop detection
+        self._last_pos = None
+        self._dist_cache = {}
+
     def act(self, obs=None, info=None):
+        self._last_pos = self.env.agent_pos
         self._recent_positions.append(self.env.agent_pos)
         if len(self._recent_positions) > self._history_len:
             self._recent_positions.pop(0)
@@ -104,19 +108,21 @@ class MCTSAgent:
     def _rollout(self, sim_env, current_depth, discount):
         #current rollout policy
         total_reward = 0.0
+        visited = {sim_env.agent_pos}
         
         for _ in range(self.max_depth - current_depth):
             if sim_env.done:
                 break
-            action = self._rollout_policy(sim_env)
+            action = self._rollout_policy(sim_env, visited)
             _, reward, _, _ = sim_env.step(action)
             total_reward += discount*reward
             discount *= self.gamma
+            visited.add(sim_env.agent_pos)
         
         total_reward += discount *self._evaluate(sim_env) #final evaluation of the state we end up in after the rollout
         return total_reward
     
-    def _rollout_policy(self, sim_env):
+    def _rollout_policy(self, sim_env, visited=None):
         pos = sim_env.agent_pos
         
         #following is done to make the code run quicker and evaluate better
@@ -134,6 +140,8 @@ class MCTSAgent:
             if not sim_env._is_walkable(nr, nc) or (nr, nc) in monster_cells:
                 continue
             value = self._step_potential(sim_env, pos, (nr, nc))
+            if visited and (nr, nc) in visited:
+                value -= 2.0 #discourage loops by penalizing already visited positions
             if value > best_value:
                 best_value = value
                 best_action = action
@@ -144,21 +152,25 @@ class MCTSAgent:
         #mirror MDP for better comparison
         reward = REWARD_STEP
         
-        if new_pos in self._recent_positions:
-            reward -= 1.0*self._recent_positions.count(new_pos) #discourage loops by penalizing recently visited positions, more if visited multiple times in recent history
+        if new_pos == self._last_pos:
+            reward -= 5.0 #had to add big penalty for going back to last position to prevent oscillations
+        elif new_pos in self._recent_positions:
+            recency = [i for i, p in enumerate(self._recent_positions) if p == new_pos]
+            most_recent_idx = max(recency) 
+            reward -= 0.5 * (most_recent_idx+1) #discourage loops by penalizing recently visited positions, more if visited more recently
         
         treasures = sim_env.treasure_positions
         
         if treasures:
-            old_dist = min(self._manhattan(old_pos, t) for t in treasures)
-            new_dist = min(self._manhattan(new_pos, t) for t in treasures)
+            old_dist = min(self._bfs_dist(old_pos, t) for t in treasures)
+            new_dist = min(self._bfs_dist(new_pos, t) for t in treasures)
             reward += REWARD_TREASURE_STEP * (old_dist - new_dist)
             
-        old_exit_dist = self._manhattan(old_pos, sim_env.exit_pos)
-        new_exit_dist = self._manhattan(new_pos, sim_env.exit_pos)
+        old_exit_dist = self._bfs_dist(old_pos, sim_env.exit_pos)
+        new_exit_dist = self._bfs_dist(new_pos, sim_env.exit_pos)
         
         #this is clever and I'm proud of it - scale exit pull by how much treasure we have
-        treasure_factor = 1.0 + sim_env.treasure_held/200
+        treasure_factor = sim_env.treasure_held/200
         reward += REWARD_EXIT_STEP * treasure_factor * (old_exit_dist - new_exit_dist)
         
         if new_pos == sim_env.exit_pos and sim_env.treasure_held > 0:
@@ -176,11 +188,11 @@ class MCTSAgent:
         score = sim_env.treasure_held * 0.5
         
         if treasures:
-            nearest_t = min(self._manhattan(pos, t) for t in treasures)
+            nearest_t = min(self._bfs_dist(pos, t) for t in treasures)
             score += REWARD_TREASURE_STEP * (20-nearest_t)
         else:
-            exit_dist = self._manhattan(pos, sim_env.exit_pos)
-            score += REWARD_EXIT_STEP * (20-exit_dist)*(1.0+sim_env.treasure_held/200)
+            exit_dist = self._bfs_dist(pos, sim_env.exit_pos)
+            score += REWARD_EXIT_STEP * (20-exit_dist)*(sim_env.treasure_held/200)
             
         return score
     
@@ -198,6 +210,24 @@ class MCTSAgent:
             actions.append('exit')
         return actions if actions else list(ACTIONS.keys()) #if no valid actions, return all actions to avoid crashing
     
-    @staticmethod
-    def _manhattan(pos1, pos2):
-        return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+    def _bfs_dist(self, src, dst):
+        if src == dst:
+            return 0
+        key = (src, dst)
+        if key in self._dist_cache:
+            return self._dist_cache[key]
+        queue = deque([(src, 0)])
+        visited = {src}
+        while queue:
+            (r, c), d = queue.popleft()
+            for dr, dc in ACTIONS.values():
+                nr, nc = r+dr, c+dc
+                if (nr, nc) == dst:
+                    self._dist_cache[key] = d+1
+                    return d+1
+                if (0<= nr < self.env.size and 0 <= nc < self.env.size and self.env.base_grid[nr][nc] != 5 and (nr, nc) not in visited):
+                    visited.add((nr, nc))
+                    queue.append(((nr, nc), d+1))
+        self._dist_cache[key] = 999 # if we can't reach the destination, return a large distance - this can happen if we're completely blocked by monsters, but it prevents crashing and allows the agent to at least try to find a way around
+        return 999
+        
