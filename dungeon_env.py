@@ -54,6 +54,7 @@ class DungeonEnv:
         self.done                  = False
         self.message               = ""
         self._attacked_this_turn = set()
+        self.monster_lost_sight_limit = MONSTER_LOST_SIGHT_LIMIT
         self._generate()
 
     def _generate(self):
@@ -317,7 +318,7 @@ class DungeonEnv:
             self.agent_pos,
             self.exit_pos,
             self.treasure_positions,
-            [m.pos for m in self.monsters],
+            [m.pos for m in self.monsters if m.alive],
         )
 
     def _info(self):

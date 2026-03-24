@@ -13,7 +13,7 @@ GAMMA = 0.97 #discount factor for future rewards in MCTS - CAN ADJUST - had to m
 
 #rollout eval:
 REWARD_STEP = -0.1 # small negative reward for each step taken (to encourage shorter paths)
-REWARD_TREASURE_STEP = 3.0 # reward per step closer to nearest treasure
+REWARD_TREASURE_STEP = 4.0 # reward per step closer to nearest treasure
 REWARD_EXIT_STEP = 4.0 # reward per step closer to exit (if have treasure)
 REWARD_EXIT_BONUS = 50.0 # Bonus for exiting the dungeon with treasure
 

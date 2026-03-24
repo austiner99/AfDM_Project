@@ -17,7 +17,7 @@ REWARD_STEP = -0.1 # small negative reward for each step taken (to encourage sho
 REWARD_TREASURE = 200.0 # Expected mean treasure reward
 REWARD_MONSTER_KILL = 45.0 # Expected mean monster kill reward
 REWARD_EXIT_BONUS = 150.0 # Bonus for exiting the dungeon with treasure
-REWARD_DEATH = -100.0 # Penalty for dying (HP reaching 0) - Death is bad
+REWARD_DEATH = -200.0 # Penalty for dying (HP reaching 0) - Death is bad
 
 class MDPAgent:
     def __init__(self, env: DungeonEnv, gamma = GAMMA, theta = THETA):

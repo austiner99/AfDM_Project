@@ -16,7 +16,7 @@ MIN_PARTICLES = 25 # minimum number of particles to maintain - if belief falls b
 
 #rweards (same as mcts)
 REWARD_STEP = -0.1
-REWARD_TREASURE_STEP = 3.0
+REWARD_TREASURE_STEP = 4.0
 REWARD_EXIT_STEP = 4.0
 REWARD_EXIT_BONUS = 50.0
 REWARD_EXPLORE = 1.75 #added to encourage exploring new areas - can adjust (had to add to stop scared agents)

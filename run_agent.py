@@ -96,20 +96,28 @@ def main():
         display = make_display(title=f"{args.agent.upper()} Agent - Fast Mode (No Visualization)")
     results = []
     for ep in range(args.episodes):
+        start_time = time.time()
         env = DungeonEnv(size = args.size)
         agent = build_agent(args.agent, env)
         verbose = args.verbose or args.episodes == 1
         if args.episodes > 1:
             print(f"Episode {ep+1}/{args.episodes}", end=' - ', flush=True)
         gold, steps, reward = run_episode(env, agent, display=display, delay=args.delay, verbose=verbose, cheat=cheat_view)
-        results.append((gold, steps, reward))
+        
         if args.episodes > 1:
             outcome = "WIN " if gold > 0 else "LOSS"
             print(f"{outcome} - Treasure: {gold}, Steps: {steps}, Reward: {reward:.1f}")
+        end_time = time.time()
+        if verbose:
+            print(f"Episode {ep+1} completed in {end_time - start_time:.2f} seconds.")
+        results.append((gold, steps, reward, end_time - start_time))
     if args.episodes > 1:
         print_summary(results, args.agent, args.episodes)
     if display and args.episodes == 1:
         input ("\nPress Enter to close")
         
+    return results
+        
 if __name__ == '__main__':
-    main()
+    results = main()
+    print(results)

@@ -10,11 +10,13 @@ The following algorithms were created to play this game:
 ### MDP Value Function
 A simple value function who is able to "cheat" or gain a full knowledge of the floor setup, monster positions,  treasure positions and the exit. It will precompute an "optimal" path but be unable to adjust based on state changes.
 
+The other major difference between this agent and the other two is that, due to hp being a discrete value from 0-100, that portion of the state is not added here in order to save on calculation time (it exploads when taking hp into account). Because of this, the agent will always attack monsters, since it doesn't have a "fear" of losing all its health.
+
 ### MCTS
 A Monte Carlo Tree Search Algorithm that will also have a full knowledge of the floor, but will be able to adjust to state changes and make decisions at every step.
 
 ### POMCP
-A Partially Observed MCTS algorithm which will use a particle filter to estimate state and actions based on limited observed information.
+A Partially Observed MCTS algorithm which will use a particle filter to estimate state and actions based on limited observed information. Other than that it will follow identical logic to the MCTS.
 
 ## Rules
 
@@ -26,8 +28,8 @@ A Partially Observed MCTS algorithm which will use a particle filter to estimate
 3. If the agent reaches 0 hp he dies and banks nothing
 4. Defeating monsters gives points equal to how difficult they were to defeat
 5. Monsters remain motionless unless they see the agent. Upon seeing an agent they will move towards the agent, so long as there is an unbroken line of sight.
-6. If the monster loses sight of the agent for three "ticks" (movements) it becomes idle again
-5. Agent can only see three tiles away
+6. If the monster loses sight of the agent for three "steps" (movements) it becomes idle again
+5. Agent can only see three tiles away, or tiles already revealed
 8. Agent ONLY gets positive points for reaching the exit with treasure. No penalty for lost hp.
 9. Failure to exit the dungeon without treasure results in a score of 0, making the scores range from 0 - (Total treasure and killed monsters)
 
