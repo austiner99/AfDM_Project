@@ -3,9 +3,6 @@
 # It then follows the optimal policy to navigate the dungeon and collect treasure while avoiding monsters
 # It has a full knowledge of the environment and does not need to explore
 
-import numpy as np
-import random
-from itertools import product
 from dungeon_env import (DungeonEnv, CELL_WALL, ACTIONS,)
 
 GAMMA = 0.95 # discount factor for value iteration - CAN ADJUST

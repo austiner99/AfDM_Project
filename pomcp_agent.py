@@ -423,6 +423,7 @@ class POMCPAgent:
         return 999
     
     def _nearest_unexplored_in(self, pos, explored):
+        # added to help with exploration - finds the nearest unexplored cell in the observed grid using BFS - recommended by Claude
         queue = deque([(pos, 0)])
         visited = {pos}
         while queue:

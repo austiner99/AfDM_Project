@@ -109,7 +109,7 @@ def main():
                 "stats": stats
             }
 
-    # Save to file
+    # Save to file - this was added by ChatGPT to have a record of all results.
     with open(OUTPUT_FILE, "w") as f:
         json.dump(all_results, f, indent=4)
 

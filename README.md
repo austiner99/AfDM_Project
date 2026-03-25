@@ -40,16 +40,17 @@ A Partially Observed MCTS algorithm which will use a particle filter to estimate
 
 ## How to Run Game and Algorithms
 ### Human-Played Game
-Run the `play.py` file. A window will appear displaying the game. Enter commands into the terminal to play.
+Run the `play.py` file. A window will appear displaying the game. Enter commands into the terminal to play. (Future developments will allow for easier play, but this was added later).
 
-### MDP-Played Game
+### Agnent-Played Game
+Run the following command when in the project directory:
 
-### MCTS-Played Game
-
-### POMCP-Played Game
+`python run_agent.py` OR `python3 run_agent.py` followed by whatever arguments you want to add (see [Configuration](#configuration) above). Specifically, the `--agent mdp`, `--agent mcts`, and `--agent pomcp` will allow you to select which agent you would like to run.
 
 ## AI Disclosure
 
 Github copilot autocompete was used to assist in autocompletion of lines and code (under heavy scrutiny). Furthermore, claude was used to clean up (remove unneccessary lines) and debug code, as well as add small annotations to various sections for easier understanding. 
 
 In summary all major functions, code structure and algorithms were human made, and only AI-edited as needed.
+
+Certain functions helper functions were later added to fix bugs and run main agents better, and are disclosed in comments under the functions.

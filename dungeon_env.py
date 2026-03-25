@@ -141,6 +141,7 @@ class DungeonEnv:
         return placed_rooms
 
     def _connect_rooms(self, room_a, room_b):
+        #code here was inspired by https://gamedevelopment.tutsplus.com/tutorials/room-based-dungeon-generation-algorithm--cms-25673 (recommended by Claude code)
         ax = room_a[0] + room_a[2] // 2
         ay = room_a[1] + room_a[3] // 2
         bx = room_b[0] + room_b[2] // 2
@@ -153,16 +154,16 @@ class DungeonEnv:
             self._carve_h(ax, bx, by)
 
     def _carve_h(self, x1, x2, y):
+        #code here was inspired by https://gamedevelopment.tutsplus.com/tutorials/room-based-dungeon-generation-algorithm--cms-25673 (recommended by Claude code)
         for x in range(min(x1, x2), max(x1, x2) + 1):
             if 0 <= x < self.size and 0 <= y < self.size:
                 self.grid[x][y] = CELL_EMPTY
 
     def _carve_v(self, y1, y2, x):
+        #code here was inspired by https://gamedevelopment.tutsplus.com/tutorials/room-based-dungeon-generation-algorithm--cms-25673 (recommended by Claude code)
         for y in range(min(y1, y2), max(y1, y2) + 1):
             if 0 <= x < self.size and 0 <= y < self.size:
                 self.grid[x][y] = CELL_EMPTY
-
-    # ── Vision ────────────────────────────────────────────────────────────────
 
     def _update_vision(self):
         ar, ac = self.agent_pos
@@ -225,8 +226,6 @@ class DungeonEnv:
         self.monsters = [m for m in self.monsters if m.alive]
         self.treasure_held += reward
         return reward, " ".join(messages)
-
-    # ── Monster logic ─────────────────────────────────────────────────────────
 
     def _has_line_of_sight(self, monster_pos):
         mr, mc = monster_pos
@@ -301,8 +300,6 @@ class DungeonEnv:
 
             occupied.add(monster.pos)
 
-    # ── Helpers ───────────────────────────────────────────────────────────────
-
     def _walkable_cells(self):
         return [(r, c) for r in range(self.size)
                        for c in range(self.size)
@@ -328,8 +325,6 @@ class DungeonEnv:
             'message':       self.message,
             'done':          self.done,
         }
-
-    # ── Step ─────────────────────────────────────────────────────────────────
 
     def step(self, action):
         if self.done:

@@ -58,7 +58,7 @@ def run_episode(env, agent, display=None, delay = 0.15, verbose = True, cheat = 
     return info['treasure_held'], steps, total_reward
 
 def print_summary(results, agent_name, episodes):
-    #following was formatted with chatGPT, feel free to change
+    #following was formatted with chatGPT to better display the results
     treasure = [r[0] for r in results]
     steps = [r[1] for r in results]
     rewards = [r[2] for r in results]
@@ -73,7 +73,7 @@ def print_summary(results, agent_name, episodes):
     print(f"{'='*50}\n")
     
 def main():
-    #parser stuff was added and recommended by claude, feel free to change
+    # parser  was added and recommended by claude to run agents easier in terminal
     parser = argparse.ArgumentParser(description="Run an agent in the Dungeon Environment.")
     parser.add_argument('--agent', choices = ['mdp', 'mcts', 'pomcp'], default='mdp', help="Which agent to run")
     parser.add_argument('--episodes', type=int, default=1, help="Number of episodes to run (default: 1)")
@@ -108,8 +108,7 @@ def main():
             outcome = "WIN " if gold > 0 else "LOSS"
             print(f"{outcome} - Treasure: {gold}, Steps: {steps}, Reward: {reward:.1f}")
         end_time = time.time()
-        if verbose:
-            print(f"Episode {ep+1} completed in {end_time - start_time:.2f} seconds.")
+        print(f"Episode {ep+1} completed in {end_time - start_time:.2f} seconds.")
         results.append((gold, steps, reward, end_time - start_time))
     if args.episodes > 1:
         print_summary(results, args.agent, args.episodes)

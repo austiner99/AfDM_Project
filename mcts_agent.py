@@ -20,7 +20,7 @@ REWARD_EXIT_BONUS = 50.0 # Bonus for exiting the dungeon with treasure
 class MCTSNode:
     #one node in the MCTS tree
     
-    __slots__ = ['action', 'parent', 'children', 'visits', 'value', 'untried_actions']
+    __slots__ = ['action', 'parent', 'children', 'visits', 'value', 'untried_actions'] #recommended by Claude code to reduce memory usage and speed up attribute access
     
     def __init__(self, action=None, parent=None, untried_actions=None):
         self.action = action
@@ -211,6 +211,7 @@ class MCTSAgent:
         return actions if actions else list(ACTIONS.keys()) #if no valid actions, return all actions to avoid crashing
     
     def _bfs_dist(self, src, dst):
+        # function inspired by Claude code (better than manhattan distance because it accounts for walls and monsters, and we cache results to speed it up since we call it so much)
         if src == dst:
             return 0
         key = (src, dst)

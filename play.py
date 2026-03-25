@@ -1,3 +1,5 @@
+# DISCLAIMER: This was added at the end for human playing and debugging, because it was not a main part of the project, 
+# most of this was generated with Claude code help, and evaluated/editted by me. 
 # controls:
 # w: up
 # s: down
