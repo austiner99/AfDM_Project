@@ -36,11 +36,12 @@ HELP = """
 """
 
 def play():
-    env = DungeonEnv(size=20, num_treasures=random.randint(3, 8), num_monsters=random.randint(3, 8))
+    env = DungeonEnv(size=20)
     info = env._info()
     info['message'] = 'Welcome to the Dungeon Crawler! Press ? for help.'
     cheat = False
     display = make_display(title='Dungeon Crawler')
+    steps = 0
     update_display(*display, env=env, info=info, cheat=cheat)
 
     print("\nDungeon Crawler — w/a/s/d move | e exit | f attack | m cheat | r restart | q quit | ? help")
@@ -48,11 +49,12 @@ def play():
 
     while True:
         raw = input('Action: ').strip().lower()
+        steps += 1
 
         if not raw:
             continue
         if raw == 'q':
-            print("Thanks for playing, quitter!")
+            print("Thanks for playing!")
             break
         if raw == '?':
             print(HELP)
@@ -82,6 +84,7 @@ def play():
             print(info['message'])
         if done:
             print("Game over! Press r to play again or q to quit.")
+            print(f"Final reward: {reward:.1f}, steps taken: {steps}")
 
 if __name__ == "__main__":
     play()

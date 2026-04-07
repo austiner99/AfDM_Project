@@ -35,17 +35,36 @@ A Partially Observed MCTS algorithm which will use a particle filter to estimate
 
 ## Configuration
 
-- Adjustable parameters (e.g., treasure values, visibility range, HP) can be modified in `dungeon_env.py`
-- The number of monsters and treasures can be configured in `play.py`
+- Adjustable parameters (e.g., treasure values, visibility range, HP, number of monsters, etc.) can be modified in `dungeon_env.py`
+- The size of the playing field can be configured in `play.py` or `run_agent.py.` Unless changed, number of rooms, treasures and monsters are scaled loosely based on room size
+
+`run_agent` parser arguments available:
+| Argument | Default | Recommended | Description |
+|---|---|---|---|
+| `--agent` | `mdp` | `mcts` (general), `pomcp` (partial observability), `mdp` (baseline) | Agent to run (`mdp`, `mcts`, or `pomcp`) |
+| `--size` | `20` | `12`–`30` | Width/height of the dungeon grid (larger sizes difficult for mdp agent) |
+| `--episodes` | `1` | `1`–`50` | Number of episodes to simulate |
+| `--seed` | `None` | `None` | Seed value for reproducible runs |
+| `--delay` | `0.15` | `0.05`–`1` | Delay in seconds per step |
+| `--no-display` | `False` | `False` (batch runs), `True` (debug/demo) | Render the game window during runs |
+| `--cheat` | `False` | Either `True` or `False` | Show the full map on each render |
+| `--fog` | `False` | Either `True` or `False` | Show fog (limited vision of agent/human player) |
+| `--verbose` | `False` | `True` for experiments | Display updates during agent play |
 
 ## How to Run Game and Algorithms
 ### Human-Played Game
-Run the `play.py` file. A window will appear displaying the game. Enter commands into the terminal to play. (Future developments will allow for easier play, but this was added later).
+Run the `play.py` file. A window will appear displaying the game. Enter commands into the terminal followed by `Enter` to play. (Future developments will allow for easier play, but this was added later).
 
 ### Agnent-Played Game
-Run the following command when in the project directory:
+Run the following command in the terminal when in the project directory:
 
 `python run_agent.py` OR `python3 run_agent.py` followed by whatever arguments you want to add (see [Configuration](#configuration) above). Specifically, the `--agent mdp`, `--agent mcts`, and `--agent pomcp` will allow you to select which agent you would like to run.
+
+Example terminal entry (when in project directory):
+
+`python3 run_agent.py --mcts --size 20 --episodes 10 --delay 0.1 --cheat --verbose`
+
+This would simulate a mcts agent playing 10 episodes on 10 different randomly generated dungeons of size 20 with a 0.1 second delay between each move (plus computation time). You would be able to see the full map during play and receive a detailed log of events during each run.
 
 ## AI Disclosure
 
@@ -54,3 +73,58 @@ Github copilot autocompete was used to assist in autocompletion of lines and cod
 In summary all major functions, code structure and algorithms were human made, and only AI-edited as needed.
 
 Certain functions helper functions were later added to fix bugs and run main agents better, and are disclosed in comments under the functions.
+
+All AI-assisted code is annotated stating how much AI was used in its creation. 
+
+## Summary of Project-Important Files in this Repository
+
+### `dungeon_env.py`
+
+Class that creates and manages dungeon objects and logic. 
+
+### `mcts_agent.py`
+
+Monte Carlo Tree Search agent class. Retains all logic and decision making processes for this agent.
+
+### `mdp_agent.py`
+
+Markov Decision Process agent class. Retains all logic and decision making processes for this agent.
+
+### `play.py`
+
+File available for human play.
+
+### `pomcp_agent.py`
+
+Partially Observable Monte Carlo Planning agent class. Retains all logic and decision making processes for this agent.
+
+### `run_agent.py`
+
+Code to run one or multiple iterations of an agent.
+
+### `visualize.py`
+
+Code to visualize the game board. Future iterations will have images in place of squares for more dynamic viewing.
+
+## Summary of Non-Project-Important Files in this Repository (can be ignored)
+
+### `experiment_results.json`
+
+File of multiple runs done for comparison. Data will be analyzed in figure form in final video.
+
+### `run_multiple_agents.py`
+
+File used to allow multiple agents to run over the weekend to produce results in `experiment_results.json.` 50 episodes at dungeon sizes 12, 18, 24, and 30 were run. 
+
+### `analyze_json_data.py`
+
+Code used to generate box-and-whiskers plots for multi-agent analysis. 
+
+### `analyze_win_rate.py`
+
+Code used to generate win rate plot for multi-agent analysis.
+
+## Summary of Results Seen
+
+(For visual information, see plots generated in the "outputs" folder)
+

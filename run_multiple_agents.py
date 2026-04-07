@@ -6,8 +6,8 @@ import sys
 
 AGENTS = ['mdp', 'mcts', 'pomcp']
 SIZES = [12, 18, 24, 30]
-EPISODES = 50
-OUTPUT_FILE = "experiment_results.json"
+EPISODES = 60
+OUTPUT_FILE = "experiment_results_2.json"
 
 
 def run_single(agent, size, episodes, seed):
