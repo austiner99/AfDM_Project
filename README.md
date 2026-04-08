@@ -32,6 +32,7 @@ A Partially Observed MCTS algorithm which will use a particle filter to estimate
 5. Agent can only see three tiles away, or tiles already revealed
 8. Agent ONLY gets positive points for reaching the exit with treasure. No penalty for lost hp.
 9. Failure to exit the dungeon without treasure results in a score of 0, making the scores range from 0 - (Total treasure and killed monsters)
+10. Only 200 steps are allowed per game
 
 ## Configuration
 
@@ -127,4 +128,18 @@ Code used to generate win rate plot for multi-agent analysis.
 ## Summary of Results Seen
 
 (For visual information, see plots generated in the "outputs" folder)
+
+### Background on Results Collection
+
+Originally it was planned to analyze all three agents on dungeons of size 12, 18, 24, and 30 and see any interesting behavior. Each agent would run 50 episodes on each of those board sizes, resulting in 200 runs per agent. Unfortunetly the runtime for the MDP agent caused the size 30 dungeon to take too long to run. This will be discussed later. For that reason the MDP agent only ran on sizes 12, 18, and 24.
+
+After the initial run, subsequent runs were done under the same parameters (though not same seeds) in order to compare results and control for random behavior. Analysis below is based on all such results.
+
+### Reward and Treasure
+
+### Steps to Completion
+
+### Time to Run
+
+### Success Rate
 

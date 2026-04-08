@@ -5,7 +5,7 @@ import json
 
 import matplotlib.pyplot as plt
 
-with open('/home/austiner99/classes/Algorithms_for_Decision_Making/AfDM_Project/experiment_results.json') as f:
+with open('/home/austiner99/classes/Algorithms_for_Decision_Making/AfDM_Project/experiment_results_2.json') as f:
     raw = json.load(f)
 AGENTS = ['mdp', 'mcts', 'pomcp']
 AGENT_LABELS = ['MDP', 'MCTS', 'POMCP']
@@ -32,5 +32,5 @@ plt.ylabel('Win Rate')
 plt.xticks([12, 18, 24, 30])
 plt.legend()
 plt.grid()
-plt.savefig('win_rate_comparison.png')
+plt.savefig('win_rate_comparison_2.png')
 plt.show()

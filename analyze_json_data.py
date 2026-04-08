@@ -22,7 +22,7 @@ warnings.filterwarnings('ignore')
 
 # ── Load data ─────────────────────────────────────────────────────────────────
 
-with open('/home/austiner99/classes/Algorithms_for_Decision_Making/AfDM_Project/experiment_results.json') as f:
+with open('/home/austiner99/classes/Algorithms_for_Decision_Making/AfDM_Project/experiment_results_2.json') as f:
     raw = json.load(f)
 
 AGENTS      = ['mdp', 'mcts', 'pomcp']
@@ -208,7 +208,7 @@ fig = make_figure(
     showfliers=True,      # or False if you also want to hide fliers
 )
 
-path = '/home/austiner99/classes/Algorithms_for_Decision_Making/AfDM_Project/outputs/plot_time_no_mdp_size24.png'
+path = '/home/austiner99/classes/Algorithms_for_Decision_Making/AfDM_Project/outputs/plot2_time_no_mdp_size24.png'
 fig.savefig(path, bbox_inches='tight', dpi=150)
 plt.close(fig)
 print(f'Saved: {path}')
