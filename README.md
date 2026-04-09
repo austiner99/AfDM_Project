@@ -10,7 +10,7 @@ A repository for my Algorithms for Decision Making class project. The project in
 The following algorithms were created to play this game:
 
 ### MDP Value Function
-A simple value function that is able to "cheat" and gain full knowledge of the floor setup, monster positions, treasure positions, and the exit. It will precompute an "optimal" path but be unable to adjust based on state changes.
+A simple value function that is able to "cheat" and gain full knowledge of the floor setup, monster positions, treasure positions, and the exit. It will precompute an "optimal" path for a given state, and every time that state changes.
 
 The other major difference between this agent and the other two is that, because HP is a discrete value from 0-100, that portion of the state is not added here in order to save on calculation time (it explodes when taking HP into account). Because of this, the agent will always attack monsters, since it doesn't have a "fear" of losing all its health.
 
@@ -55,6 +55,17 @@ A Partially Observable MCTS algorithm that uses a particle filter to estimate st
 | `--fog` | `False` | Either `True` or `False` | Show fog (limited vision of agent/human player) |
 | `--verbose` | `False` | `True` for experiments | Display updates during agent play |
 
+## Installation
+
+**Requirements:** Python 3.8+
+
+Install dependencies:
+```bash
+pip install numpy matplotlib
+```
+
+No other external libraries are required.
+
 ## How to Run Game and Algorithms
 ### Human-Played Game
 Run the `play.py` file. A window will appear displaying the game. Enter commands into the terminal followed by `Enter` to play. (Future developments will allow easier play, but this was added later.)
@@ -79,6 +90,20 @@ In summary, all major functions, code structure, and algorithms were human-made,
 Certain helper functions were later added to fix bugs and run the main agents better, and are disclosed in comments under those functions.
 
 All AI-assisted code is annotated, stating how much AI was used in its creation.
+
+## Validation
+
+To verify the MDP agent's Bellman updates converge correctly on a small dungeon:
+```bash
+python run_agent.py --agent mdp --size 12 --episodes 1 --seed 42 --no-display
+```
+
+Expected: agent converges in under 40 value iteration steps, exits with treasure > 0.
+
+To verify MCTS makes sensible decisions (agent adjacent to exit with treasure should exit):
+```bash
+python run_agent.py --agent mcts --size 12 --episodes 3 --seed 0 --no-display --verbose
+```
 
 ## Summary of Project-Important Files in this Repository
 
